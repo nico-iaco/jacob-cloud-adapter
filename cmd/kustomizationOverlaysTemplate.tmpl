@@ -1,0 +1,13 @@
+namespace: nexus-batch
+resources:
+    - ../../base
+commonLabels:
+    app: {{ .ProgramName }}
+configMapGenerator:
+    - name: {{ .ProgramName }}-properties-configmap
+      options:
+          annotations:
+              strategy.spinnaker.io/versioned: "false"
+          disableNameSuffixHash: true
+      files:
+          -   {{ .Filename }}
