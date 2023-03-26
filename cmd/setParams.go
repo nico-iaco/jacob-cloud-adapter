@@ -7,8 +7,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"gopkg.in/yaml.v3"
-	"jacobCloudAdapter/model"
+	"os"
 )
 
 // setParamsCmd represents the setParams command
@@ -48,50 +47,62 @@ func setConfigs(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	configFile, err := configFS.ReadFile("config.yml")
-	if err != nil {
-		println("Error: " + err.Error())
-		return
-	}
-
-	var config model.ApplicationConfig
-
-	err = yaml.Unmarshal(configFile, &config)
-	if err != nil {
-		println("Error: " + err.Error())
-		return
-	}
-
 	cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-		setParameter(flag.Name, flag.Value.String(), &config)
+		setParameter(flag.Name, flag.Value.String())
 	})
-
-	fmt.Println(config)
 
 }
 
-func setParameter(paramName string, paramValue string, config *model.ApplicationConfig) {
+func setParameter(paramName string, paramValue string) {
 	switch paramName {
 	case "basePath":
-		config.Base.Path = paramValue
+		err := os.Setenv("JACOB_ADAPTER_BASE_PATH", paramValue)
+		if err != nil {
+			fmt.Println("Error: " + err.Error())
+			return
+		}
 		break
 	case "prodUsername":
-		config.Prod.Username = paramValue
+		err := os.Setenv("JACOB_ADAPTER_PROD_USERNAME", paramValue)
+		if err != nil {
+			fmt.Println("Error: " + err.Error())
+			return
+		}
 		break
 	case "prodPwd":
-		config.Prod.Password = paramValue
+		err := os.Setenv("JACOB_ADAPTER_PROD_PWD", paramValue)
+		if err != nil {
+			fmt.Println("Error: " + err.Error())
+			return
+		}
 		break
 	case "prodUrl":
-		config.Prod.Url = paramValue
+		err := os.Setenv("JACOB_ADAPTER_PROD_URL", paramValue)
+		if err != nil {
+			fmt.Println("Error: " + err.Error())
+			return
+		}
 		break
 	case "collUsername":
-		config.Coll.Username = paramValue
+		err := os.Setenv("JACOB_ADAPTER_COLL_USERNAME", paramValue)
+		if err != nil {
+			fmt.Println("Error: " + err.Error())
+			return
+		}
 		break
 	case "collPwd":
-		config.Coll.Password = paramValue
+		err := os.Setenv("JACOB_ADAPTER_COLL_PWD", paramValue)
+		if err != nil {
+			fmt.Println("Error: " + err.Error())
+			return
+		}
 		break
 	case "collUrl":
-		config.Coll.Url = paramValue
+		err := os.Setenv("JACOB_ADAPTER_COLL_URL", paramValue)
+		if err != nil {
+			fmt.Println("Error: " + err.Error())
+			return
+		}
 		break
 	default:
 		println("Parameter not found!")

@@ -35,8 +35,9 @@ copied from src/main/resources/${programName}.yml file.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		programName, _ := cmd.Flags().GetString("programName")
+		isNewProgram, _ := cmd.Flags().GetBool("isNewProgram")
 
-		doTheMagic(programName)
+		doTheMagic(programName, isNewProgram)
 	},
 }
 
@@ -49,7 +50,7 @@ func init() {
 	// and all subcommands, e.g.:
 	adaptCmd.PersistentFlags().Int("jacobVersion", 3, "The version of jacob program to adapt")
 
-	adaptCmd.PersistentFlags().Bool("isNewProgram", false, "If the program is new or not (For feature use)")
+	adaptCmd.PersistentFlags().BoolP("isNewProgram", "n", false, "If the program is new or not")
 
 	adaptCmd.PersistentFlags().String("programName", "", "The name of the program to adapt")
 	err := adaptCmd.MarkPersistentFlagRequired("programName")
@@ -63,7 +64,7 @@ func init() {
 	// adaptCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func doTheMagic(programName string) error {
+func doTheMagic(programName string, isNewProgram bool) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -105,20 +106,6 @@ func doTheMagic(programName string) error {
 		return err
 	}
 
-	configFile, err := configFS.ReadFile("config.yml")
-	if err != nil {
-		println("Error: " + err.Error())
-		return err
-	}
-
-	var config model.ApplicationConfig
-
-	err = yaml.Unmarshal(configFile, &config)
-	if err != nil {
-		println("Error: " + err.Error())
-		return err
-	}
-
 	prodProperty := propertyMap
 	collProperty := propertyMap
 
@@ -135,12 +122,14 @@ func doTheMagic(programName string) error {
 		return err
 	}
 
-	prodDataSourceProperty.(map[string]interface{})["url"] = config.Prod.Url
-	prodDataSourceProperty.(map[string]interface{})["user"] = config.Prod.Username
-	prodDataSourceProperty.(map[string]interface{})["password"] = config.Prod.Password
+	basePath := os.Getenv("JACOB_ADAPTER_BASE_PATH") + programName
+
+	prodDataSourceProperty.(map[string]interface{})["url"] = os.Getenv("JACOB_ADAPTER_PROD_URL")
+	prodDataSourceProperty.(map[string]interface{})["user"] = os.Getenv("JACOB_ADAPTER_PROD_USERNAME")
+	prodDataSourceProperty.(map[string]interface{})["password"] = os.Getenv("JACOB_ADAPTER_PROD_PASSWORD")
 
 	prodProperty["dataSourceProperties"] = prodDataSourceProperty
-	prodProperty["basePath"] = config.Base.Path + programName
+	prodProperty["basePath"] = basePath
 
 	productionPropertyFile, err := yaml.Marshal(prodProperty)
 	if err != nil {
@@ -148,12 +137,12 @@ func doTheMagic(programName string) error {
 		return err
 	}
 
-	collDataSourceProperty.(map[string]interface{})["url"] = config.Coll.Url
-	collDataSourceProperty.(map[string]interface{})["user"] = config.Coll.Username
-	collDataSourceProperty.(map[string]interface{})["password"] = config.Coll.Password
+	collDataSourceProperty.(map[string]interface{})["url"] = os.Getenv("JACOB_ADAPTER_COLL_URL")
+	collDataSourceProperty.(map[string]interface{})["user"] = os.Getenv("JACOB_ADAPTER_COLL_USERNAME")
+	collDataSourceProperty.(map[string]interface{})["password"] = os.Getenv("JACOB_ADAPTER_COLL_PASSWORD")
 
 	collProperty["dataSourceProperties"] = collDataSourceProperty
-	collProperty["basePath"] = config.Base.Path + programName
+	collProperty["basePath"] = basePath
 
 	collPropertyFile, err := yaml.Marshal(collProperty)
 	if err != nil {
@@ -161,15 +150,17 @@ func doTheMagic(programName string) error {
 		return err
 	}
 
-	err = os.Mkdir(k8sBaseDir, 0755)
-	err = os.Mkdir(baseDir, 0755)
-	err = os.Mkdir(overlaysDir, 0755)
-	err = os.Mkdir(productionDir, 0755)
-	err = os.Mkdir(collDir, 0755)
+	if isNewProgram {
+		err = os.Mkdir(k8sBaseDir, 0755)
+		err = os.Mkdir(baseDir, 0755)
+		err = os.Mkdir(overlaysDir, 0755)
+		err = os.Mkdir(productionDir, 0755)
+		err = os.Mkdir(collDir, 0755)
 
-	if err != nil {
-		println("Error: " + err.Error())
-		return err
+		if err != nil {
+			println("Error: " + err.Error())
+			return err
+		}
 	}
 
 	err = os.WriteFile(productionDir+"/"+overlaysTemplateModel.Filename, productionPropertyFile, 0755)
@@ -184,45 +175,47 @@ func doTheMagic(programName string) error {
 		return err
 	}
 
-	kustomizationBaseFile, err := os.Create(kustomizationBaseFilePath)
-	if err != nil {
-		println("Error: " + err.Error())
-		return err
-	}
-	kustomizationProdFile, err := os.Create(kustomizationProdFilePath)
-	if err != nil {
-		println("Error: " + err.Error())
-		return err
-	}
-	kustomizationCollFile, err := os.Create(kustomizationCollFilePath)
-	if err != nil {
-		println("Error: " + err.Error())
-		return err
-	}
+	if isNewProgram {
+		kustomizationBaseFile, err := os.Create(kustomizationBaseFilePath)
+		if err != nil {
+			println("Error: " + err.Error())
+			return err
+		}
+		kustomizationProdFile, err := os.Create(kustomizationProdFilePath)
+		if err != nil {
+			println("Error: " + err.Error())
+			return err
+		}
+		kustomizationCollFile, err := os.Create(kustomizationCollFilePath)
+		if err != nil {
+			println("Error: " + err.Error())
+			return err
+		}
 
-	tmplBase, err := template.ParseFS(kbtFS, baseTemplateFilePath)
-	if err != nil {
-		println("Error: " + err.Error())
-		return err
-	}
-	tmplOverlays, err := template.ParseFS(kotFS, overlaysTemplateFilePath)
-	if err != nil {
-		println("Error: " + err.Error())
-		return err
-	}
+		tmplBase, err := template.ParseFS(kbtFS, baseTemplateFilePath)
+		if err != nil {
+			println("Error: " + err.Error())
+			return err
+		}
+		tmplOverlays, err := template.ParseFS(kotFS, overlaysTemplateFilePath)
+		if err != nil {
+			println("Error: " + err.Error())
+			return err
+		}
 
-	err = tmplBase.Execute(kustomizationBaseFile, baseTemplateModel)
-	if err != nil {
-		return err
-	}
-	err = tmplOverlays.Execute(kustomizationProdFile, overlaysTemplateModel)
-	if err != nil {
-		return err
-	}
+		err = tmplBase.Execute(kustomizationBaseFile, baseTemplateModel)
+		if err != nil {
+			return err
+		}
+		err = tmplOverlays.Execute(kustomizationProdFile, overlaysTemplateModel)
+		if err != nil {
+			return err
+		}
 
-	err = tmplOverlays.Execute(kustomizationCollFile, overlaysTemplateModel)
-	if err != nil {
-		return err
+		err = tmplOverlays.Execute(kustomizationCollFile, overlaysTemplateModel)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
