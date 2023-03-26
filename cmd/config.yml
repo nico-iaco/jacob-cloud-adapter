@@ -1,0 +1,10 @@
+base:
+    path: "/opt/batch/jacob/"
+prod:
+    username: "nxcobolbatch"
+    password: ""
+    url: ""
+coll:
+    username: "nxcobolbatch"
+    password: ""
+    url: ""

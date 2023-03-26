@@ -7,6 +7,7 @@ Copyright © 2023 Nicola Iacovelli <nicolaiacovelli98@gmail.com>
 
 import (
 	"embed"
+	"gopkg.in/yaml.v3"
 	"jacobCloudAdapter/model"
 	"os"
 	"strings"
@@ -21,6 +22,9 @@ var kbtFS embed.FS
 //go:embed kustomizationOverlaysTemplate.tmpl
 var kotFS embed.FS
 
+//go:embed config.yml
+var configFS embed.FS
+
 // adaptCmd represents the adapt command
 var adaptCmd = &cobra.Command{
 	Use:   "adapt",
@@ -28,10 +32,7 @@ var adaptCmd = &cobra.Command{
 	Long: `This command will adapt the program in the current directory to run in cloud environment creating k8s folder
 with coll and prod environment folder and kustomization.yaml file with the program file property 
 copied from src/main/resources/${programName}.yml file.
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		programName, _ := cmd.Flags().GetString("programName")
 
@@ -51,6 +52,11 @@ func init() {
 	adaptCmd.PersistentFlags().Bool("isNewProgram", false, "If the program is new or not (For feature use)")
 
 	adaptCmd.PersistentFlags().String("programName", "", "The name of the program to adapt")
+	err := adaptCmd.MarkPersistentFlagRequired("programName")
+	if err != nil {
+		println("programName flag is REQUIRED!")
+		return
+	}
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
@@ -84,12 +90,95 @@ func doTheMagic(programName string) error {
 	kustomizationProdFilePath := productionDir + "/kustomization.yaml"
 	kustomizationCollFilePath := collDir + "/kustomization.yaml"
 
+	propertyFilePath := workingDir + "/src/main/resources/" + overlaysTemplateModel.Filename
+	var propertyMap map[string]interface{}
+
+	propertyFile, err := os.ReadFile(propertyFilePath)
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
+
+	err = yaml.Unmarshal(propertyFile, &propertyMap)
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
+
+	configFile, err := configFS.ReadFile("config.yml")
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
+
+	var config model.ApplicationConfig
+
+	err = yaml.Unmarshal(configFile, &config)
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
+
+	prodProperty := propertyMap
+	collProperty := propertyMap
+
+	dataSourceProperty, ok := propertyMap["dataSourceProperties"]
+	if !ok {
+		println("Error: dataSourceProperties not found in " + overlaysTemplateModel.Filename)
+		return err
+	}
+
+	collDataSourceProperty, ok := dataSourceProperty.(map[string]interface{})["MAIN"]
+	prodDataSourceProperty, ok := dataSourceProperty.(map[string]interface{})["MAIN"]
+	if !ok {
+		println("Error: MAIN not found in dataSourceProperties")
+		return err
+	}
+
+	prodDataSourceProperty.(map[string]interface{})["url"] = config.Prod.Url
+	prodDataSourceProperty.(map[string]interface{})["user"] = config.Prod.Username
+	prodDataSourceProperty.(map[string]interface{})["password"] = config.Prod.Password
+
+	prodProperty["dataSourceProperties"] = prodDataSourceProperty
+	prodProperty["basePath"] = config.Base.Path + programName
+
+	productionPropertyFile, err := yaml.Marshal(prodProperty)
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
+
+	collDataSourceProperty.(map[string]interface{})["url"] = config.Coll.Url
+	collDataSourceProperty.(map[string]interface{})["user"] = config.Coll.Username
+	collDataSourceProperty.(map[string]interface{})["password"] = config.Coll.Password
+
+	collProperty["dataSourceProperties"] = collDataSourceProperty
+	collProperty["basePath"] = config.Base.Path + programName
+
+	collPropertyFile, err := yaml.Marshal(collProperty)
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
+
 	err = os.Mkdir(k8sBaseDir, 0755)
 	err = os.Mkdir(baseDir, 0755)
 	err = os.Mkdir(overlaysDir, 0755)
 	err = os.Mkdir(productionDir, 0755)
 	err = os.Mkdir(collDir, 0755)
 
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
+
+	err = os.WriteFile(productionDir+"/"+overlaysTemplateModel.Filename, productionPropertyFile, 0755)
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
+
+	err = os.WriteFile(collDir+"/"+overlaysTemplateModel.Filename, collPropertyFile, 0755)
 	if err != nil {
 		println("Error: " + err.Error())
 		return err
