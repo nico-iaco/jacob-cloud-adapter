@@ -44,5 +44,6 @@ jobs:
         env:
           SHORT_SHA: ${{ steps.short-sha.outputs.sha }}
         with:
+          context: .
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}
