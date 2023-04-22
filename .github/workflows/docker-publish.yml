@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - 'main'
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: benjlevesque/short-sha@v1.2
+        id: short-sha
+        with:
+          length: 7
+      -
+        name: Build and push
+        uses: docker/build-push-action@v4
+        env:
+          SHORT_SHA: ${{ steps.short-sha.outputs.sha }}
+        with:
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}
