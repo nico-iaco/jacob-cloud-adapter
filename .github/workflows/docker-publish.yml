@@ -6,8 +6,6 @@ name: ci
 # documentation.
 
 on:
-  schedule:
-    - cron: '38 16 * * *'
   push:
     branches: [ "main" ]
     # Publish semver tags as releases.
