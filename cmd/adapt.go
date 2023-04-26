@@ -7,6 +7,7 @@ Copyright © 2023 Nicola Iacovelli <nicolaiacovelli98@gmail.com>
 
 import (
 	"embed"
+	"errors"
 	"gopkg.in/yaml.v3"
 	"jacobCloudAdapter/model"
 	"os"
@@ -150,17 +151,15 @@ func doTheMagic(programName string, isNewProgram bool) error {
 		return err
 	}
 
-	if isNewProgram {
-		err = os.Mkdir(k8sBaseDir, 0755)
-		err = os.Mkdir(baseDir, 0755)
-		err = os.Mkdir(overlaysDir, 0755)
-		err = os.Mkdir(productionDir, 0755)
-		err = os.Mkdir(collDir, 0755)
+	err = createDirIfNotExists(k8sBaseDir)
+	err = createDirIfNotExists(baseDir)
+	err = createDirIfNotExists(overlaysDir)
+	err = createDirIfNotExists(productionDir)
+	err = createDirIfNotExists(collDir)
 
-		if err != nil {
-			println("Error: " + err.Error())
-			return err
-		}
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
 	}
 
 	err = os.WriteFile(productionDir+"/"+overlaysTemplateModel.Filename, productionPropertyFile, 0755)
@@ -175,48 +174,56 @@ func doTheMagic(programName string, isNewProgram bool) error {
 		return err
 	}
 
-	if isNewProgram {
-		kustomizationBaseFile, err := os.Create(kustomizationBaseFilePath)
-		if err != nil {
-			println("Error: " + err.Error())
-			return err
-		}
-		kustomizationProdFile, err := os.Create(kustomizationProdFilePath)
-		if err != nil {
-			println("Error: " + err.Error())
-			return err
-		}
-		kustomizationCollFile, err := os.Create(kustomizationCollFilePath)
-		if err != nil {
-			println("Error: " + err.Error())
-			return err
-		}
+	kustomizationBaseFile, err := os.Create(kustomizationBaseFilePath)
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
+	kustomizationProdFile, err := os.Create(kustomizationProdFilePath)
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
+	kustomizationCollFile, err := os.Create(kustomizationCollFilePath)
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
 
-		tmplBase, err := template.ParseFS(kbtFS, baseTemplateFilePath)
-		if err != nil {
-			println("Error: " + err.Error())
-			return err
-		}
-		tmplOverlays, err := template.ParseFS(kotFS, overlaysTemplateFilePath)
-		if err != nil {
-			println("Error: " + err.Error())
-			return err
-		}
+	tmplBase, err := template.ParseFS(kbtFS, baseTemplateFilePath)
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
+	tmplOverlays, err := template.ParseFS(kotFS, overlaysTemplateFilePath)
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
 
-		err = tmplBase.Execute(kustomizationBaseFile, baseTemplateModel)
-		if err != nil {
-			return err
-		}
-		err = tmplOverlays.Execute(kustomizationProdFile, overlaysTemplateModel)
-		if err != nil {
-			return err
-		}
+	err = tmplBase.Execute(kustomizationBaseFile, baseTemplateModel)
+	if err != nil {
+		return err
+	}
+	err = tmplOverlays.Execute(kustomizationProdFile, overlaysTemplateModel)
+	if err != nil {
+		return err
+	}
 
-		err = tmplOverlays.Execute(kustomizationCollFile, overlaysTemplateModel)
+	err = tmplOverlays.Execute(kustomizationCollFile, overlaysTemplateModel)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createDirIfNotExists(dir string) error {
+	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(dir, os.ModePerm)
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
