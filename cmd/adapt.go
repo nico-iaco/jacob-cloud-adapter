@@ -51,7 +51,7 @@ func init() {
 	// and all subcommands, e.g.:
 	adaptCmd.PersistentFlags().Int("jacobVersion", 3, "The version of jacob program to adapt")
 
-	adaptCmd.PersistentFlags().BoolP("isNewProgram", "n", false, "If the program is new or not")
+	adaptCmd.PersistentFlags().Bool("isNewProgram", false, "If the program is new or not (For feature use)")
 
 	adaptCmd.PersistentFlags().String("programName", "", "The name of the program to adapt")
 	err := adaptCmd.MarkPersistentFlagRequired("programName")
@@ -107,6 +107,20 @@ func doTheMagic(programName string, isNewProgram bool) error {
 		return err
 	}
 
+	configFile, err := configFS.ReadFile("config.yml")
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
+
+	var config model.ApplicationConfig
+
+	err = yaml.Unmarshal(configFile, &config)
+	if err != nil {
+		println("Error: " + err.Error())
+		return err
+	}
+
 	prodProperty := propertyMap
 	collProperty := propertyMap
 
@@ -123,14 +137,12 @@ func doTheMagic(programName string, isNewProgram bool) error {
 		return err
 	}
 
-	basePath := os.Getenv("JACOB_ADAPTER_BASE_PATH") + programName
-
-	prodDataSourceProperty.(map[string]interface{})["url"] = os.Getenv("JACOB_ADAPTER_PROD_URL")
-	prodDataSourceProperty.(map[string]interface{})["user"] = os.Getenv("JACOB_ADAPTER_PROD_USERNAME")
-	prodDataSourceProperty.(map[string]interface{})["password"] = os.Getenv("JACOB_ADAPTER_PROD_PASSWORD")
+	prodDataSourceProperty.(map[string]interface{})["url"] = config.Prod.Url
+	prodDataSourceProperty.(map[string]interface{})["user"] = config.Prod.Username
+	prodDataSourceProperty.(map[string]interface{})["password"] = config.Prod.Password
 
 	prodProperty["dataSourceProperties"] = prodDataSourceProperty
-	prodProperty["basePath"] = basePath
+	prodProperty["basePath"] = config.Base.Path + programName
 
 	productionPropertyFile, err := yaml.Marshal(prodProperty)
 	if err != nil {
@@ -138,12 +150,12 @@ func doTheMagic(programName string, isNewProgram bool) error {
 		return err
 	}
 
-	collDataSourceProperty.(map[string]interface{})["url"] = os.Getenv("JACOB_ADAPTER_COLL_URL")
-	collDataSourceProperty.(map[string]interface{})["user"] = os.Getenv("JACOB_ADAPTER_COLL_USERNAME")
-	collDataSourceProperty.(map[string]interface{})["password"] = os.Getenv("JACOB_ADAPTER_COLL_PASSWORD")
+	collDataSourceProperty.(map[string]interface{})["url"] = config.Coll.Url
+	collDataSourceProperty.(map[string]interface{})["user"] = config.Coll.Username
+	collDataSourceProperty.(map[string]interface{})["password"] = config.Coll.Password
 
 	collProperty["dataSourceProperties"] = collDataSourceProperty
-	collProperty["basePath"] = basePath
+	collProperty["basePath"] = config.Base.Path + programName
 
 	collPropertyFile, err := yaml.Marshal(collProperty)
 	if err != nil {

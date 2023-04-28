@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-	"gopkg.in/yaml.v3"
-	"jacobCloudAdapter/model"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -48,55 +45,5 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	//rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
-	configFile, err := configFS.ReadFile("config.yml")
-	if err != nil {
-		println("Error: " + err.Error())
-		return
-	}
-
-	var config model.ApplicationConfig
-
-	err = yaml.Unmarshal(configFile, &config)
-	if err != nil {
-		fmt.Println("Error: " + err.Error())
-		return
-	}
-
-	err = os.Setenv("JACOB_ADAPTER_BASE_PATH_ENV", config.Base.Path)
-	if err != nil {
-		fmt.Println("Error: " + err.Error())
-		return
-	}
-	err = os.Setenv("JACOB_ADAPTER_PROD_USERNAME_ENV", config.Prod.Username)
-	if err != nil {
-		fmt.Println("Error: " + err.Error())
-		return
-	}
-	err = os.Setenv("JACOB_ADAPTER_PROD_PWD_ENV", config.Prod.Password)
-	if err != nil {
-		fmt.Println("Error: " + err.Error())
-		return
-	}
-	err = os.Setenv("JACOB_ADAPTER_PROD_URL_ENV", config.Prod.Url)
-	if err != nil {
-		fmt.Println("Error: " + err.Error())
-		return
-	}
-	err = os.Setenv("JACOB_ADAPTER_COLL_USERNAME_ENV", config.Coll.Username)
-	if err != nil {
-		fmt.Println("Error: " + err.Error())
-		return
-	}
-	err = os.Setenv("JACOB_ADAPTER_COLL_PWD_ENV", config.Coll.Password)
-	if err != nil {
-		fmt.Println("Error: " + err.Error())
-		return
-	}
-	err = os.Setenv("JACOB_ADAPTER_COLL_URL_ENV", config.Coll.Url)
-	if err != nil {
-		fmt.Println("Error: " + err.Error())
-		return
-	}
 
 }
