@@ -38,7 +38,10 @@ copied from src/main/resources/${programName}.yml file.
 		programName, _ := cmd.Flags().GetString("programName")
 		isNewProgram, _ := cmd.Flags().GetBool("isNewProgram")
 
-		doTheMagic(programName, isNewProgram)
+		err := doTheMagic(programName, isNewProgram)
+		if err != nil {
+			return
+		}
 	},
 }
 
@@ -163,28 +166,33 @@ func doTheMagic(programName string, isNewProgram bool) error {
 		return err
 	}
 
+	println("Creating k8s directories...")
 	err = createDirIfNotExists(k8sBaseDir)
 	err = createDirIfNotExists(baseDir)
 	err = createDirIfNotExists(overlaysDir)
 	err = createDirIfNotExists(productionDir)
 	err = createDirIfNotExists(collDir)
-
 	if err != nil {
 		println("Error: " + err.Error())
 		return err
 	}
+	println("K8s folders created ✅")
+
+	println("Generating property files...")
 
 	err = os.WriteFile(productionDir+"/"+overlaysTemplateModel.Filename, productionPropertyFile, 0755)
 	if err != nil {
 		println("Error: " + err.Error())
 		return err
 	}
+	println("Generated production property file ✅")
 
 	err = os.WriteFile(collDir+"/"+overlaysTemplateModel.Filename, collPropertyFile, 0755)
 	if err != nil {
 		println("Error: " + err.Error())
 		return err
 	}
+	println("Generated coll property file ✅")
 
 	kustomizationBaseFile, err := os.Create(kustomizationBaseFilePath)
 	if err != nil {
@@ -213,6 +221,7 @@ func doTheMagic(programName string, isNewProgram bool) error {
 		return err
 	}
 
+	println("Creating kustomization.yaml files...")
 	err = tmplBase.Execute(kustomizationBaseFile, baseTemplateModel)
 	if err != nil {
 		return err
@@ -226,6 +235,8 @@ func doTheMagic(programName string, isNewProgram bool) error {
 	if err != nil {
 		return err
 	}
+	println("kustomization.yaml files created ✅")
+	println("jacob program adapted successfully 🚀")
 
 	return nil
 }
@@ -236,6 +247,9 @@ func createDirIfNotExists(dir string) error {
 		if err != nil {
 			return err
 		}
+		println("Folder ", dir, " created...")
+	} else {
+		println("Folder ", dir, " already present in path...")
 	}
 	return nil
 }
