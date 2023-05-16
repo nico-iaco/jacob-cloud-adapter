@@ -130,18 +130,18 @@ func doTheMagic(programName string, isNewProgram bool) error {
 		return err
 	}
 
-	collDataSourceProperty, ok := dataSourceProperty.(map[string]interface{})["MAIN"]
-	prodDataSourceProperty, ok := dataSourceProperty.(map[string]interface{})["MAIN"]
-	if !ok {
-		println("Error: MAIN not found in dataSourceProperties")
-		return err
+	_, ok = dataSourceProperty.(map[string]interface{})["H2"]
+	if ok {
+		dataSourceProperty.(map[string]interface{})["H2"].(map[string]interface{})["url"] = "jdbc:h2:file:" + config.Base.Path + programName + "/" + programName + "_db"
 	}
 
-	prodDataSourceProperty.(map[string]interface{})["url"] = config.Prod.Url
-	prodDataSourceProperty.(map[string]interface{})["user"] = config.Prod.Username
-	prodDataSourceProperty.(map[string]interface{})["password"] = config.Prod.Password
+	collDataSourceProperty := dataSourceProperty
+	prodDataSourceProperty := dataSourceProperty
 
-	prodProperty["dataSourceProperties"] = prodDataSourceProperty
+	prodDataSourceProperty.(map[string]interface{})["MAIN"].(map[string]interface{})["url"] = config.Prod.Url
+	prodDataSourceProperty.(map[string]interface{})["MAIN"].(map[string]interface{})["user"] = config.Prod.Username
+	prodDataSourceProperty.(map[string]interface{})["MAIN"].(map[string]interface{})["password"] = config.Prod.Password
+
 	prodProperty["basePath"] = config.Base.Path + programName
 
 	productionPropertyFile, err := yaml.Marshal(prodProperty)
@@ -150,9 +150,9 @@ func doTheMagic(programName string, isNewProgram bool) error {
 		return err
 	}
 
-	collDataSourceProperty.(map[string]interface{})["url"] = config.Coll.Url
-	collDataSourceProperty.(map[string]interface{})["user"] = config.Coll.Username
-	collDataSourceProperty.(map[string]interface{})["password"] = config.Coll.Password
+	collDataSourceProperty.(map[string]interface{})["MAIN"].(map[string]interface{})["url"] = config.Coll.Url
+	collDataSourceProperty.(map[string]interface{})["MAIN"].(map[string]interface{})["user"] = config.Coll.Username
+	collDataSourceProperty.(map[string]interface{})["MAIN"].(map[string]interface{})["password"] = config.Coll.Password
 
 	collProperty["dataSourceProperties"] = collDataSourceProperty
 	collProperty["basePath"] = config.Base.Path + programName
