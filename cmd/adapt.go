@@ -124,6 +124,9 @@ func doTheMagic(programName string, isNewProgram bool) error {
 		return err
 	}
 
+	propertyMap["files"] = fixSlashIfWrong(propertyMap["files"])
+	propertyMap["basePath"] = config.Base.Path + programName
+
 	prodProperty := propertyMap
 	collProperty := propertyMap
 
@@ -138,14 +141,7 @@ func doTheMagic(programName string, isNewProgram bool) error {
 		dataSourceProperty.(map[string]interface{})["H2"].(map[string]interface{})["url"] = "jdbc:h2:file:" + config.Base.Path + programName + "/" + programName + "_db"
 	}
 
-	collDataSourceProperty := dataSourceProperty
-	prodDataSourceProperty := dataSourceProperty
-
-	prodDataSourceProperty.(map[string]interface{})["MAIN"].(map[string]interface{})["url"] = config.Prod.Url
-	prodDataSourceProperty.(map[string]interface{})["MAIN"].(map[string]interface{})["user"] = config.Prod.Username
-	prodDataSourceProperty.(map[string]interface{})["MAIN"].(map[string]interface{})["password"] = config.Prod.Password
-
-	prodProperty["basePath"] = config.Base.Path + programName
+	prodProperty["dataSourceProperties"] = populateDatabaseConnectionProperties(dataSourceProperty, config.Prod.Url, config.Prod.Username, config.Prod.Password)
 
 	productionPropertyFile, err := yaml.Marshal(prodProperty)
 	if err != nil {
@@ -153,12 +149,7 @@ func doTheMagic(programName string, isNewProgram bool) error {
 		return err
 	}
 
-	collDataSourceProperty.(map[string]interface{})["MAIN"].(map[string]interface{})["url"] = config.Coll.Url
-	collDataSourceProperty.(map[string]interface{})["MAIN"].(map[string]interface{})["user"] = config.Coll.Username
-	collDataSourceProperty.(map[string]interface{})["MAIN"].(map[string]interface{})["password"] = config.Coll.Password
-
-	collProperty["dataSourceProperties"] = collDataSourceProperty
-	collProperty["basePath"] = config.Base.Path + programName
+	collProperty["dataSourceProperties"] = populateDatabaseConnectionProperties(dataSourceProperty, config.Coll.Url, config.Coll.Username, config.Coll.Password)
 
 	collPropertyFile, err := yaml.Marshal(collProperty)
 	if err != nil {
@@ -252,4 +243,26 @@ func createDirIfNotExists(dir string) error {
 		println("Folder ", dir, " already present in path...")
 	}
 	return nil
+}
+
+func populateDatabaseConnectionProperties(properties interface{}, url string, username string, password string) interface{} {
+	properties.(map[string]interface{})["MAIN"].(map[string]interface{})["url"] = url
+	properties.(map[string]interface{})["MAIN"].(map[string]interface{})["user"] = username
+	properties.(map[string]interface{})["MAIN"].(map[string]interface{})["password"] = password
+	return properties
+}
+
+func fixSlashIfWrong(properties interface{}) interface{} {
+	if list, ok := properties.([]interface{}); ok {
+		// Iterate through the list
+		for _, item := range list {
+			if obj, ok := item.(map[string]interface{}); ok {
+				if field, ok := obj["path"].(string); ok {
+					newValue := strings.ReplaceAll(field, "\\", "/")
+					obj["path"] = newValue
+				}
+			}
+		}
+	}
+	return properties
 }
