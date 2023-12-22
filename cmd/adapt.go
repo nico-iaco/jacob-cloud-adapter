@@ -131,25 +131,20 @@ func doTheMagic(programName string, isNewProgram bool) error {
 	collProperty := propertyMap
 
 	dataSourceProperty, ok := propertyMap["dataSourceProperties"]
-	if !ok {
-		println("Error: dataSourceProperties not found in " + overlaysTemplateModel.Filename)
-		return err
-	}
-
-	_, ok = dataSourceProperty.(map[string]interface{})["H2"]
 	if ok {
-		dataSourceProperty.(map[string]interface{})["H2"].(map[string]interface{})["url"] = "jdbc:h2:file:" + config.Base.Path + programName + "/" + programName + "_db"
+		_, ok = dataSourceProperty.(map[string]interface{})["H2"]
+		if ok {
+			dataSourceProperty.(map[string]interface{})["H2"].(map[string]interface{})["url"] = "jdbc:h2:file:" + config.Base.Path + programName + "/" + programName + "_db"
+		}
+		prodProperty["dataSourceProperties"] = populateDatabaseConnectionProperties(dataSourceProperty, config.Prod.Url, config.Prod.Username, config.Prod.Password)
+		collProperty["dataSourceProperties"] = populateDatabaseConnectionProperties(dataSourceProperty, config.Coll.Url, config.Coll.Username, config.Coll.Password)
 	}
-
-	prodProperty["dataSourceProperties"] = populateDatabaseConnectionProperties(dataSourceProperty, config.Prod.Url, config.Prod.Username, config.Prod.Password)
 
 	productionPropertyFile, err := yaml.Marshal(prodProperty)
 	if err != nil {
 		println("Error: " + err.Error())
 		return err
 	}
-
-	collProperty["dataSourceProperties"] = populateDatabaseConnectionProperties(dataSourceProperty, config.Coll.Url, config.Coll.Username, config.Coll.Password)
 
 	collPropertyFile, err := yaml.Marshal(collProperty)
 	if err != nil {
