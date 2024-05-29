@@ -1,10 +1,28 @@
 base:
     path: "/opt/batch/jacob/"
 prod:
-    username: "nxcobolbatch"
-    password: ""
-    url: ""
+    postgres:
+        username: "nxcobolbatch"
+        password: ""
+        url: ""
+    db2:
+        username: ""
+        password: ""
+        url: ""
+    oracle:
+        username: ""
+        password: ""
+        url: ""
 coll:
-    username: "nxcobolbatch"
-    password: ""
-    url: ""
+    postgres:
+        username: "nxcobolbatch"
+        password: ""
+        url: ""
+    db2:
+        username: ""
+        password: ""
+        url: ""
+    oracle:
+        username: "nxcobolbatch"
+        password: ""
+        url: ""

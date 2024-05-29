@@ -1,7 +1,7 @@
 package model
 
 type EnvApplicationConfig struct {
-	Username string
-	Password string
-	Url      string
+	Postgres DbConfig
+	Db2      DbConfig
+	Oracle   DbConfig
 }

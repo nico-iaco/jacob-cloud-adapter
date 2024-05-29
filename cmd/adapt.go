@@ -131,14 +131,22 @@ func doTheMagic(programName string, isNewProgram bool) error {
 	collProperty := propertyMap
 
 	dataSourceProperty, ok := propertyMap["dataSourceProperties"]
+
 	if ok {
+		for datasourcePropertyKey, datasourcePropertyValue := range dataSourceProperty.(map[string]interface{}) {
+			prodProperty["dataSourceProperties"].(map[string]interface{})[datasourcePropertyKey] = populateDatabaseConnectionProperties(datasourcePropertyValue, config.Prod, programName, config.Base.Path)
+			dataSourceProperty.(map[string]interface{})[datasourcePropertyKey] = populateDatabaseConnectionProperties(datasourcePropertyValue, config.Coll, programName, config.Base.Path)
+		}
+	}
+
+	/*if ok {
 		_, ok = dataSourceProperty.(map[string]interface{})["H2"]
 		if ok {
 			dataSourceProperty.(map[string]interface{})["H2"].(map[string]interface{})["url"] = "jdbc:h2:file:" + config.Base.Path + programName + "/" + programName + "_db"
 		}
-		prodProperty["dataSourceProperties"] = populateDatabaseConnectionProperties(dataSourceProperty, config.Prod.Url, config.Prod.Username, config.Prod.Password)
+		prodProperty["dataSourceProperties"] = populateDatabaseConnectionProperties(dataSourceProperty, config.Prod, config.Prod.Username, config.Prod.Password)
 		collProperty["dataSourceProperties"] = populateDatabaseConnectionProperties(dataSourceProperty, config.Coll.Url, config.Coll.Username, config.Coll.Password)
-	}
+	}*/
 
 	productionPropertyFile, err := yaml.Marshal(prodProperty)
 	if err != nil {
@@ -240,10 +248,31 @@ func createDirIfNotExists(dir string) error {
 	return nil
 }
 
-func populateDatabaseConnectionProperties(properties interface{}, url string, username string, password string) interface{} {
-	properties.(map[string]interface{})["MAIN"].(map[string]interface{})["url"] = url
-	properties.(map[string]interface{})["MAIN"].(map[string]interface{})["user"] = username
-	properties.(map[string]interface{})["MAIN"].(map[string]interface{})["password"] = password
+func populateDatabaseConnectionProperties(properties interface{}, databaseConfig model.EnvApplicationConfig, programName string, basePath string) interface{} {
+	driverName := properties.(map[string]interface{})["driverClassName"]
+	switch driverName {
+	case "com.ibm.db2.jcc.DB2Driver":
+		properties.(map[string]interface{})["url"] = databaseConfig.Db2.Url
+		properties.(map[string]interface{})["user"] = databaseConfig.Db2.Username
+		properties.(map[string]interface{})["password"] = databaseConfig.Db2.Password
+		break
+	case "org.postgresql.Driver":
+		properties.(map[string]interface{})["url"] = databaseConfig.Postgres.Url
+		properties.(map[string]interface{})["user"] = databaseConfig.Postgres.Username
+		properties.(map[string]interface{})["password"] = databaseConfig.Postgres.Password
+		break
+	case "org.h2.Driver":
+		properties.(map[string]interface{})["url"] = "jdbc:h2:file:" + basePath + programName + "/" + programName + "_db"
+		break
+	case "oracle.jdbc.driver.OracleDriver":
+		properties.(map[string]interface{})["url"] = databaseConfig.Oracle.Url
+		properties.(map[string]interface{})["user"] = databaseConfig.Oracle.Username
+		properties.(map[string]interface{})["password"] = databaseConfig.Oracle.Password
+		break
+	default:
+		println("Driver not found💥")
+	}
+
 	return properties
 }
 
